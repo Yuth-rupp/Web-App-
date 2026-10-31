@@ -39,6 +39,9 @@ student_df["Risk Level"] = student_df.apply(
     axis=1
 )
 
+# Initialize Session State 
+if "risk_history" not in st.session_state: 
+    st.session_state["risk_history"] = []
 with st.sidebar:
     st.title("EduRisk Menu")
     selected_page = st.radio(
@@ -134,30 +137,98 @@ elif selected_page == "Risk Checker":
     st.title("Single Student Risk Checker")
 
     st.write(
-        "Use this page to check the risk level of one student based on "
-        "score and attendance."
+        "Enter student information to check risk level. "
+        "The result is based on score and attendence."
     )
+    st.info(
+        "This tool is for academic support. Risk results should help students, "
+        "not label or punish them."
 
+    )
+    # Create Form
     with st.form("risk_checker_form"):
+
         input_name = st.text_input("Student Name")
-        input_score = st.number_input("Score", 0, 100, 50)
-        input_attendance = st.number_input("Attendance", 0, 100, 50)
+
+        input_score = st.number_input(
+            "Score", 0, 100, 50
+        )
+        
+        input_attendance = st.number_input(
+            "Attendance", 0, 100, 50
+        )
         submitted = st.form_submit_button("Check Risk")
 
+    # Form Submission Logic
     if submitted:
-        risk_result = get_risk_level(input_score, input_attendance)
 
-        st.write("Student Name:", input_name)
-        st.write("Score:", input_score)
-        st.write("Attendance:", input_attendance)
+        # Input Validation    
+        if input_name.strip() == "":
+            st.warning("Please enter the student name.")
 
-        if risk_result == "Low Risk":
-            st.success("Risk Level: Low Risk")
-        elif risk_result == "Medium Risk":
-            st.warning("Risk Level: Medium Risk")
         else:
-            st.error("Risk Level: High Risk")
+            # Calculate Risk             
+            risk_result = get_risk_level(
+                input_score,
+                input_attendance
+            )
 
+            # Create Result Dictionary
+            result = {
+                "Student Name": input_name.strip(),
+                "Score": input_score,
+                "Attendence": input_attendance,
+                "Risk Level": risk_result
+            }
+
+            # Save Result to Session State
+            st.session_state["risk_history"].append(result)
+
+            # Display Risk Feedback
+            if risk_result == "Low Risk":
+                st.success("Risk Level: Low Risk")
+                st.write("Student appears on track.")
+
+            elif risk_result == "Medium Risk":
+                st.warning("Risk Level: Medium Risk")
+                st.write(
+                    "Monitor progress and provide guidance."
+                )
+            else:
+                st.error("Risk Level: High Risk")
+
+                st.write(
+                    "Student may need additional support."
+                )
+            st.write("Student Name:", input_name.strip())
+            st.write("Score:", input_score)
+            st.write("Attendance:", input_attendance)
+
+    # Recent Risk Checks
+    st.subheader("Recent Risk Checks")
+    if len(st.session_state["risk_history"]) > 0:
+
+        history_df = pd.DataFrame(
+            st.session_state["risk_history"]
+        )        
+        st.dataframe(history_df)
+
+        # Clear History Button
+        if st.button("Clear History"):
+
+            st.session_state["risk_history"] = []
+
+            st.success("Risk check history cleared.")
+    else:
+        st.info("No risk checks yet.")
+
+    # Ethics Reminder
+    st.warning(
+        "Ethics Reminder: Risk results should be used as guidance for support, "
+        "not as final judgment about a student."
+    )
+
+# 11. About page
 else:
     st.title("About")
 
@@ -175,3 +246,4 @@ else:
         "Ethics Reminder: Student risk information should be used responsibly "
         "to support learning and student success."
     )
+   
